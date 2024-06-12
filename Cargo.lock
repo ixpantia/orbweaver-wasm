@@ -192,7 +192,7 @@ dependencies = [
 
 [[package]]
 name = "orbweaver-wasm"
-version = "0.3.2"
+version = "0.10.1"
 dependencies = [
  "console_error_panic_hook",
  "log",
