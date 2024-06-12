@@ -1,76 +1,221 @@
-use orbweaver as ow;
-use wasm_bindgen::prelude::{wasm_bindgen, Closure, JsValue};
+use orbweaver::prelude as ow;
+use wasm_bindgen::{prelude::wasm_bindgen, JsError};
 
 #[wasm_bindgen]
-struct Node(ow::Node<JsValue>);
+pub fn panic_hook() {
+    console_error_panic_hook::set_once();
+}
 
 #[wasm_bindgen]
-struct DirectedGraph(ow::DirectedGraph<JsValue>);
+pub struct DirectedGraphBuilder(ow::DirectedGraphBuilder);
 
 #[wasm_bindgen]
-struct Edge(ow::Edge);
+impl DirectedGraphBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        DirectedGraphBuilder(ow::DirectedGraphBuilder::new())
+    }
+
+    pub fn add_edge(&mut self, from: &str, to: &str) {
+        self.0.add_edge(from, to);
+    }
+
+    pub fn add_path(&mut self, path: Vec<String>) {
+        self.0.add_path(path);
+    }
+
+    pub fn build_directed(&mut self) -> DirectedGraph {
+        let mut new_builder = ow::DirectedGraphBuilder::new();
+        std::mem::swap(&mut self.0, &mut new_builder);
+        DirectedGraph(new_builder.build_directed())
+    }
+
+    pub fn build_acyclic(&mut self) -> Result<DirectedAcyclicGraph, JsError> {
+        let mut new_builder = ow::DirectedGraphBuilder::new();
+        std::mem::swap(&mut self.0, &mut new_builder);
+        Ok(DirectedAcyclicGraph(new_builder.build_acyclic()?))
+    }
+}
+
+impl Default for DirectedGraphBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[wasm_bindgen]
+pub struct DirectedGraph(ow::DirectedGraph);
+
+#[wasm_bindgen]
+pub struct DirectedAcyclicGraph(ow::DirectedAcyclicGraph);
 
 #[wasm_bindgen]
 impl DirectedGraph {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        DirectedGraph(ow::DirectedGraph::new())
+    pub fn from_bin(val: &[u8]) -> Result<DirectedGraph, JsError> {
+        Ok(DirectedGraph(ow::DirectedGraph::from_binary(val)?))
     }
 
-    pub fn add_node(&mut self, id: &str, data: JsValue) -> Result<(), wasm_bindgen::JsError> {
-        self.0.add_node(id, data)?;
-        Ok(())
+    pub fn to_bin(&self) -> Result<Vec<u8>, JsError> {
+        let mut buffer = Vec::new();
+        self.0.to_binary(&mut buffer)?;
+        Ok(buffer)
     }
 
-    pub fn add_edge(&mut self, from: &str, to: &str) -> Result<(), wasm_bindgen::JsError> {
-        self.0.add_edge(from, to)?;
-        Ok(())
-    }
-
-    pub fn add_path(&mut self, path: Vec<String>) -> Result<(), wasm_bindgen::JsError> {
-        self.0.add_path(&path)?;
-        Ok(())
-    }
-
-    pub fn get_edge(&self, from: &str, to: &str) -> Option<Edge> {
-        self.0.get_edge(from, to).map(Edge)
-    }
-
-    pub fn get_incoming_edges(&self, node: &str) -> Vec<Edge> {
-        self.0
-            .get_incoming_edges(node)
-            .into_iter()
-            .map(Edge)
-            .collect()
-    }
-
-    pub fn nodes(&self) -> Vec<String> {
-        self.0.nodes().map(|node| node.id().to_string()).collect()
-    }
-
-    pub fn clone(&self) -> Self {
+    pub fn deep_clone(&self) -> Self {
         DirectedGraph(self.0.clone())
     }
 
-    pub fn find_path(&self, from: &str, to: &str) -> Option<Vec<String>> {
-        self.0
-            .find_path(from, to)
-            .map(|path| path.into_iter().map(String::from).collect())
+    pub fn find_path(&self, from: &str, to: &str) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .find_path(from, to)?
+            .into_iter()
+            .map(String::from)
+            .collect())
     }
 
-    pub fn children(&self, node: &str) -> Vec<String> {
+    pub fn children(&self, nodes: Vec<String>) -> Vec<String> {
         self.0
-            .children(node)
+            .children(nodes)
+            .map(|children| children.iter().copied().map(String::from).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn parents(&self, nodes: Vec<String>) -> Vec<String> {
+        self.0
+            .parents(nodes)
+            .map(|parents| parents.iter().copied().map(String::from).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn has_children(&self, nodes: Vec<String>) -> Result<Vec<u8>, JsError> {
+        Ok(self
+            .0
+            .has_children(nodes)?
+            .into_iter()
+            .map(|x| x as u8)
+            .collect())
+    }
+
+    pub fn least_common_parents(&self, selected: Vec<String>) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .least_common_parents(&selected)?
+            .into_iter()
+            .map(String::from)
+            .collect())
+    }
+
+    pub fn get_all_leaves(&self) -> Vec<String> {
+        self.0
+            .get_all_leaves()
             .into_iter()
             .map(String::from)
             .collect()
     }
 
-    pub fn parents(&self, node: &str) -> Vec<String> {
-        self.0.parents(node).into_iter().map(String::from).collect()
+    pub fn get_leaves_under(&self, node_ids: Vec<String>) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .get_leaves_under(node_ids.as_slice())?
+            .into_iter()
+            .map(String::from)
+            .collect())
     }
 
-    pub fn clear_edges(&mut self) {
-        self.0.clear_edges();
+    pub fn nodes(&self) -> Vec<String> {
+        self.0.nodes().into_iter().map(String::from).collect()
+    }
+
+    pub fn length(&self) -> u64 {
+        self.0.len() as u64
+    }
+}
+
+#[wasm_bindgen]
+impl DirectedAcyclicGraph {
+    pub fn from_bin(val: &[u8]) -> Result<DirectedAcyclicGraph, JsError> {
+        Ok(DirectedAcyclicGraph(ow::DirectedAcyclicGraph::from_binary(
+            val,
+        )?))
+    }
+
+    pub fn to_bin(&self) -> Result<Vec<u8>, JsError> {
+        let mut buffer = Vec::new();
+        self.0.to_binary(&mut buffer)?;
+        Ok(buffer)
+    }
+    pub fn into_directed_graph(&self) -> DirectedGraph {
+        DirectedGraph(self.0.clone().into_inner())
+    }
+
+    pub fn deep_clone(&self) -> Self {
+        DirectedAcyclicGraph(self.0.clone())
+    }
+
+    pub fn find_path(&self, from: &str, to: &str) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .find_path(from, to)?
+            .into_iter()
+            .map(String::from)
+            .collect())
+    }
+
+    pub fn children(&self, nodes: Vec<String>) -> Vec<String> {
+        self.0
+            .children(nodes)
+            .map(|children| children.iter().copied().map(String::from).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn parents(&self, nodes: Vec<String>) -> Vec<String> {
+        self.0
+            .parents(nodes)
+            .map(|parents| parents.iter().copied().map(String::from).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn has_children(&self, nodes: Vec<String>) -> Result<Vec<u8>, JsError> {
+        Ok(self
+            .0
+            .has_children(nodes)?
+            .into_iter()
+            .map(|x| x as u8)
+            .collect())
+    }
+
+    pub fn least_common_parents(&self, selected: Vec<String>) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .least_common_parents(&selected)?
+            .into_iter()
+            .map(String::from)
+            .collect())
+    }
+
+    pub fn get_all_leaves(&self) -> Vec<String> {
+        self.0
+            .get_all_leaves()
+            .into_iter()
+            .map(String::from)
+            .collect()
+    }
+
+    pub fn get_leaves_under(&self, node_ids: Vec<String>) -> Result<Vec<String>, JsError> {
+        Ok(self
+            .0
+            .get_leaves_under(node_ids.as_slice())?
+            .into_iter()
+            .map(String::from)
+            .collect())
+    }
+
+    pub fn nodes(&self) -> Vec<String> {
+        self.0.nodes().into_iter().map(String::from).collect()
+    }
+
+    pub fn length(&self) -> u64 {
+        self.0.len() as u64
     }
 }
