@@ -77,14 +77,14 @@ impl DirectedGraph {
     pub fn children(&self, nodes: Vec<String>) -> Vec<String> {
         self.0
             .children(nodes)
-            .map(|children| children.iter().copied().map(String::from).collect())
+            .map(|children| children.iter().map(String::from).collect())
             .unwrap_or_default()
     }
 
     pub fn parents(&self, nodes: Vec<String>) -> Vec<String> {
         self.0
             .parents(nodes)
-            .map(|parents| parents.iter().copied().map(String::from).collect())
+            .map(|parents| parents.iter().map(String::from).collect())
             .unwrap_or_default()
     }
 
@@ -165,14 +165,14 @@ impl DirectedAcyclicGraph {
     pub fn children(&self, nodes: Vec<String>) -> Vec<String> {
         self.0
             .children(nodes)
-            .map(|children| children.iter().copied().map(String::from).collect())
+            .map(|children| children.iter().map(String::from).collect())
             .unwrap_or_default()
     }
 
     pub fn parents(&self, nodes: Vec<String>) -> Vec<String> {
         self.0
             .parents(nodes)
-            .map(|parents| parents.iter().copied().map(String::from).collect())
+            .map(|parents| parents.iter().map(String::from).collect())
             .unwrap_or_default()
     }
 
@@ -188,7 +188,7 @@ impl DirectedAcyclicGraph {
     pub fn least_common_parents(&self, selected: Vec<String>) -> Result<Vec<String>, JsError> {
         Ok(self
             .0
-            .least_common_parents(&selected)?
+            .least_common_parents(selected)?
             .into_iter()
             .map(String::from)
             .collect())
