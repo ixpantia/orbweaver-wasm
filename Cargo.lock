@@ -133,9 +133,9 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "orbweaver"
-version = "0.14.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a98bf79ee172c496812a2af7db09961853cded11b8ff0be361dfb78ccb8eef82"
+checksum = "9c80cca0f07aaf76960b876f1b18625af5c8d8dd99b50422a138519bd6e423aa"
 dependencies = [
  "flate2",
  "fxhash",
@@ -146,10 +146,11 @@ dependencies = [
 
 [[package]]
 name = "orbweaver-wasm"
-version = "0.14.0"
+version = "0.16.0"
 dependencies = [
  "console_error_panic_hook",
  "orbweaver",
+ "serde-wasm-bindgen",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -199,6 +200,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

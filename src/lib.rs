@@ -1,5 +1,5 @@
 use orbweaver::prelude as ow;
-use wasm_bindgen::{prelude::wasm_bindgen, JsError};
+use wasm_bindgen::{prelude::wasm_bindgen, JsError, JsObject, JsValue};
 
 #[wasm_bindgen]
 pub fn panic_hook() {
@@ -130,6 +130,11 @@ impl DirectedGraph {
     pub fn length(&self) -> u64 {
         self.0.len() as u64
     }
+
+    pub fn find_path_one_to_many(&self, from: &str, to: Vec<String>) -> Result<JsValue, JsError> {
+        let value = self.0.find_path_one_to_many(from, to)?;
+        Ok(serde_wasm_bindgen::to_value(&value)?)
+    }
 }
 
 #[wasm_bindgen]
@@ -217,5 +222,10 @@ impl DirectedAcyclicGraph {
 
     pub fn length(&self) -> u64 {
         self.0.len() as u64
+    }
+
+    pub fn find_path_one_to_many(&self, from: &str, to: Vec<String>) -> Result<JsValue, JsError> {
+        let value = self.0.find_path_one_to_many(from, to)?;
+        Ok(serde_wasm_bindgen::to_value(&value)?)
     }
 }
